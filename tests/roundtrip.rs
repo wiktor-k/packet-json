@@ -2,8 +2,13 @@ use std::path::PathBuf;
 
 use rstest::rstest;
 
+fn init() {
+    let _ = env_logger::builder().is_test(true).try_init();
+}
+
 #[rstest]
 fn main(#[files("tests/test-cases/*-Packet")] path: PathBuf) -> testresult::TestResult {
+    init();
     eprintln!("ok: {path:?}");
     let mut s = Vec::new();
     let c = std::io::Cursor::new(&mut s);
