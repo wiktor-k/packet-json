@@ -7,7 +7,7 @@ fn init() {
 }
 
 #[rstest]
-fn main(#[files("tests/test-cases/*-Packet")] path: PathBuf) -> testresult::TestResult {
+fn main(#[files("tests/test-cases/*-Packet.pgp")] path: PathBuf) -> testresult::TestResult {
     init();
     eprintln!("ok: {path:?}");
     let mut s = Vec::new();
