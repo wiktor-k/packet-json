@@ -13,6 +13,6 @@ fn main(#[files("tests/test-cases/*-Packet.pgp")] path: PathBuf) -> testresult::
     let mut s = Vec::new();
     let c = std::io::Cursor::new(&mut s);
     packet_json::write_packet(std::fs::File::open(path)?, c)?;
-    eprintln!("Ok: {}", String::from_utf8_lossy(&s));
+    println!("Ok: {}", String::from_utf8_lossy(&s));
     Ok(())
 }

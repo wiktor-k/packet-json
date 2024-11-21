@@ -1,7 +1,10 @@
 use std::io::{Read, Write};
 
 use chrono::{DateTime, Utc};
-use pgp::packet::{Packet, PacketParser, Subpacket, SubpacketData};
+use pgp::{
+    packet::{Packet, PacketParser, Subpacket, SubpacketData},
+    types::SignatureBytes,
+};
 
 #[derive(Debug, serde::Serialize)]
 struct JsonSubpacket {
@@ -15,9 +18,17 @@ struct JsonSubpacket {
 #[derive(Debug, serde::Serialize)]
 #[serde(tag = "name")]
 enum JsonSubpacketData {
-    IssuerFingerprint { fingerprint: Vec<u8> },
-    IssuerKeyId { key_id: Vec<u8> },
-    SignatureCreationTime { created_at: DateTime<Utc> },
+    IssuerFingerprint {
+        #[serde(serialize_with = "hex::serde::serialize")]
+        fingerprint: Vec<u8>,
+    },
+    IssuerKeyId {
+        #[serde(serialize_with = "hex::serde::serialize")]
+        key_id: Vec<u8>,
+    },
+    SignatureCreationTime {
+        created_at: DateTime<Utc>,
+    },
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -32,8 +43,19 @@ enum JsonPacket {
         hashed_subpackets: Vec<JsonSubpacket>,
         unhashed_subpackets: Vec<JsonSubpacket>,
         digest_prefix: [u8; 2],
-        signature: Vec<u8>,
+        signature: JsonSignature,
     },
+}
+
+#[derive(Debug, serde::Serialize)]
+#[serde(transparent)]
+struct HexBytes(#[serde(serialize_with = "hex::serde::serialize")] Vec<u8>);
+
+#[derive(Debug, serde::Serialize)]
+#[serde(untagged)]
+enum JsonSignature {
+    Mpis { mpis: Vec<HexBytes> },
+    Raw { raw: Vec<u8> },
 }
 
 fn subpacket_to_repr(subpacket: &Subpacket) -> JsonSubpacket {
@@ -106,7 +128,12 @@ fn packet_to_repr(packet: Result<Packet, pgp::errors::Error>) -> JsonPacket {
                 .map(subpacket_to_repr)
                 .collect(),
             digest_prefix: sig.signed_hash_value,
-            signature: vec![],
+            signature: match sig.signature {
+                SignatureBytes::Mpis(vec) => JsonSignature::Mpis {
+                    mpis: vec.iter().map(|v| HexBytes(v.to_vec())).collect(),
+                },
+                SignatureBytes::Native(vec) => JsonSignature::Raw { raw: vec },
+            },
         },
         _ => todo!(),
     }
